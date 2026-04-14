@@ -1,3 +1,19 @@
+/// Position mode: "fixed" = specific coordinates, "current" = click at cursor position
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PositionMode {
+    Fixed,
+    Current,
+}
+
+impl PositionMode {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "current" => PositionMode::Current,
+            _ => PositionMode::Fixed,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct ClickerConfig {
     pub interval: f64,
@@ -23,6 +39,7 @@ pub struct ClickerConfig {
     pub edge_stop_right: i32,
     pub edge_stop_bottom: i32,
     pub edge_stop_left: i32,
+    pub position_mode: PositionMode,
 }
 
 #[derive(Clone, Debug, serde::Serialize)]

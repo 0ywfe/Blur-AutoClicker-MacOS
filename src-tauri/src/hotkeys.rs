@@ -1,3 +1,4 @@
+use crate::dev_logger::DEV_LOGGER;
 use crate::AppHandle;
 use crate::ClickerState;
 use tauri::Manager;
@@ -24,6 +25,8 @@ pub fn register_hotkey_inner(app: &AppHandle, hotkey: String) -> Result<String, 
 
     app.global_shortcut()
         .on_shortcut(shortcut, move |app_handle, _shortcut, event| {
+            let state_str = format!("{:?}", event.state());
+            DEV_LOGGER.log("HOTKEY", &format!("Event received: state={}", state_str));
             if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
                 handle_hotkey_pressed(app_handle);
             } else {
@@ -32,6 +35,10 @@ pub fn register_hotkey_inner(app: &AppHandle, hotkey: String) -> Result<String, 
         })
         .map_err(|e| format!("Failed to register shortcut: {}", e))?;
 
+    DEV_LOGGER.log(
+        "HOTKEY",
+        &format!("Registered shortcut: {}", format_hotkey_binding(&binding)),
+    );
     Ok(format_hotkey_binding(&binding))
 }
 
@@ -139,27 +146,34 @@ pub fn start_hotkey_listener(_app: AppHandle) {
 }
 
 pub fn handle_hotkey_pressed(app: &AppHandle) {
+    DEV_LOGGER.log("HOTKEY", "handle_hotkey_pressed called");
     let mode = {
         let state = app.state::<ClickerState>();
         let mode = state.settings.lock().unwrap().mode.clone();
+        DEV_LOGGER.log("HOTKEY", &format!("mode='{}'", mode));
         mode
     };
 
     if mode == "Toggle" {
+        DEV_LOGGER.log("HOTKEY", "Executing TOGGLE");
         let _ = crate::engine::worker::toggle_clicker_inner(app);
     } else if mode == "Hold" {
+        DEV_LOGGER.log("HOTKEY", "Executing START");
         let _ = crate::engine::worker::start_clicker_inner(app);
     }
 }
 
 pub fn handle_hotkey_released(app: &AppHandle) {
+    DEV_LOGGER.log("HOTKEY", "handle_hotkey_released called");
     let mode = {
         let state = app.state::<ClickerState>();
         let mode = state.settings.lock().unwrap().mode.clone();
+        DEV_LOGGER.log("HOTKEY", &format!("mode='{}'", mode));
         mode
     };
 
     if mode == "Hold" {
+        DEV_LOGGER.log("HOTKEY", "Executing STOP (hold mode)");
         let _ = crate::engine::worker::stop_clicker_inner(
             app,
             Some(String::from("Stopped from hold hotkey")),

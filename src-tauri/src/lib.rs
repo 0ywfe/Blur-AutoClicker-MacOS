@@ -2,6 +2,7 @@ mod settings;
 use settings::ClickerSettings;
 mod app_state;
 use crate::app_state::ClickerState;
+mod dev_logger;
 mod engine;
 mod hotkeys;
 mod telemetry;

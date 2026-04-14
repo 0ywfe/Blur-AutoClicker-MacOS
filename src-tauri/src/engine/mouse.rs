@@ -4,13 +4,21 @@ use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 use core_graphics::geometry::CGPoint;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use super::rng::FastRng;
+use crate::dev_logger::DEV_LOGGER;
+
+/// Cached display height for coordinate conversion
+static DISPLAY_HEIGHT: OnceLock<i32> = OnceLock::new();
+
+fn get_display_height() -> i32 {
+    *DISPLAY_HEIGHT.get_or_init(|| CGDisplay::main().bounds().size.height as i32)
+}
 
 pub fn current_cursor_position() -> Option<(i32, i32)> {
-    let display = CGDisplay::main();
-    let height = display.bounds().size.height as i32;
+    let height = get_display_height();
 
     let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState).ok()?;
     let event = CGEvent::new(source).ok()?;
@@ -35,6 +43,7 @@ fn create_mouse_event(
 
 #[inline]
 pub fn move_mouse(x: i32, y: i32) {
+    eprintln!("[MOUSE] move_mouse to ({}, {})", x, y);
     let point = CGPoint::new(x as f64, y as f64);
     if let Some(event) = create_mouse_event(CGEventType::MouseMoved, point, CGMouseButton::Left) {
         let _ = event.post(CGEventTapLocation::HID);
@@ -49,7 +58,12 @@ pub fn send_clicks(
     double_click_delay_ms: u32,
     running: &Arc<AtomicBool>,
 ) {
+    eprintln!(
+        "[MOUSE] send_clicks: button={}, count={}, hold_ms={}",
+        button, count, hold_ms
+    );
     if count == 0 {
+        eprintln!("[MOUSE] send_clicks early return: count=0");
         return;
     }
 
@@ -71,6 +85,20 @@ pub fn send_clicks(
 
     let loc = current_cursor_position().unwrap_or((0, 0));
     let point = CGPoint::new(loc.0 as f64, loc.1 as f64);
+    DEV_LOGGER.log(
+        "MOUSE",
+        &format!(
+            "send_clicks: button={}, count={}, loc=({}, {})",
+            button, count, loc.0, loc.1
+        ),
+    );
+    DEV_LOGGER.log(
+        "MOUSE",
+        &format!(
+            "  down_event={:?}, up_event={:?}, mouse_button={:?}",
+            down_event, up_event, mouse_button
+        ),
+    );
 
     for index in 0..count {
         if !running.load(Ordering::SeqCst) {
@@ -78,7 +106,11 @@ pub fn send_clicks(
         }
 
         if let Some(event) = create_mouse_event(down_event, point, mouse_button) {
+            eprintln!("[MOUSE] Posted mouse DOWN event");
             let _ = event.post(CGEventTapLocation::HID);
+        } else {
+            DEV_LOGGER.log("MOUSE", "Failed to create mouse DOWN event");
+            eprintln!("[MOUSE] Failed to create mouse DOWN event");
         }
 
         if hold_ms > 0 {
@@ -86,7 +118,11 @@ pub fn send_clicks(
         }
 
         if let Some(event) = create_mouse_event(up_event, point, mouse_button) {
+            eprintln!("[MOUSE] Posted mouse UP event");
             let _ = event.post(CGEventTapLocation::HID);
+        } else {
+            DEV_LOGGER.log("MOUSE", "Failed to create mouse UP event");
+            eprintln!("[MOUSE] Failed to create mouse UP event");
         }
 
         if index + 1 < count && use_double_click_gap && double_click_delay_ms > 0 {

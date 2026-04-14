@@ -6,6 +6,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::app_state::ClickerStatusPayload;
+use crate::dev_logger::DEV_LOGGER;
 use crate::engine::start_clicker as engine_start;
 use crate::engine::stats::{print_run_stats, record_run};
 use crate::ClickerSettings;
@@ -16,14 +17,17 @@ use super::failsafe::should_stop_for_failsafe;
 use super::mouse::{get_cursor_pos, move_mouse, send_clicks, smooth_move};
 use super::rng::FastRng;
 use super::ClickerConfig;
+use super::PositionMode;
 use super::RunOutcome;
 use super::CLICK_COUNT;
 
 // -- Tauri-aware commands --
 
 pub fn start_clicker_inner(app: &AppHandle) -> Result<ClickerStatusPayload, String> {
+    DEV_LOGGER.log("WORKER", "start_clicker_inner called");
     let state = app.state::<ClickerState>();
     if state.running.load(Ordering::SeqCst) {
+        DEV_LOGGER.log("WORKER", "Clicker already running, returning error");
         return Err(String::from("Clicker is already running"));
     }
 
@@ -34,7 +38,36 @@ pub fn start_clicker_inner(app: &AppHandle) -> Result<ClickerStatusPayload, Stri
 
     let settings = state.settings.lock().unwrap().clone();
     let telemetry_enabled = settings.telemetry_enabled;
+    DEV_LOGGER.log(
+        "WORKER",
+        &format!("settings.mouse_button='{}'", settings.mouse_button),
+    );
+    DEV_LOGGER.log(
+        "WORKER",
+        &format!("settings.position_enabled={}", settings.position_enabled),
+    );
+    DEV_LOGGER.log(
+        "WORKER",
+        &format!(
+            "settings.position_x={}, position_y={}",
+            settings.position_x, settings.position_y
+        ),
+    );
+    DEV_LOGGER.log(
+        "WORKER",
+        &format!(
+            "settings.position_mode='{}', position_enabled={}",
+            settings.position_mode, settings.position_enabled
+        ),
+    );
     let config = build_config(&settings)?;
+    DEV_LOGGER.log(
+        "WORKER",
+        &format!(
+            "config built successfully: button={}, pos_x={}, pos_y={}",
+            config.button, config.pos_x, config.pos_y
+        ),
+    );
     state.running.store(true, Ordering::SeqCst);
     let running = state.running.clone();
     let app_handle = app.clone();
@@ -78,7 +111,9 @@ pub fn stop_clicker_inner(
 }
 
 pub fn build_config(settings: &ClickerSettings) -> Result<ClickerConfig, String> {
+    DEV_LOGGER.log("WORKER", "build_config called");
     if settings.click_speed <= 0.0 {
+        DEV_LOGGER.log("WORKER", "Error: Click speed must be greater than zero");
         return Err(String::from("Click speed must be greater than zero"));
     }
 
@@ -90,9 +125,21 @@ pub fn build_config(settings: &ClickerSettings) -> Result<ClickerConfig, String>
     };
 
     let button = match settings.mouse_button.as_str() {
-        "Right" => 1,
-        "Middle" => 2,
-        _ => 0,
+        "Right" => {
+            DEV_LOGGER.log("WORKER", "mouse_button=Right -> button=1");
+            1
+        }
+        "Middle" => {
+            DEV_LOGGER.log("WORKER", "mouse_button=Middle -> button=2");
+            2
+        }
+        _ => {
+            DEV_LOGGER.log(
+                "WORKER",
+                &format!("mouse_button={} -> button=0 (Left)", settings.mouse_button),
+            );
+            0
+        }
     };
 
     let time_limit_secs = if settings.time_limit_enabled {
@@ -149,6 +196,7 @@ pub fn build_config(settings: &ClickerSettings) -> Result<ClickerConfig, String>
         edge_stop_right: settings.edge_stop_right,
         edge_stop_bottom: settings.edge_stop_bottom,
         edge_stop_left: settings.edge_stop_left,
+        position_mode: PositionMode::from_str(&settings.position_mode),
     })
 }
 
@@ -207,7 +255,16 @@ pub fn start_clicker(config: ClickerConfig, running: Arc<AtomicBool>) -> RunOutc
     };
 
     let batch_interval = config.interval * batch_size as f64;
-    let has_position = config.pos_x != 0 || config.pos_y != 0;
+    let has_fixed_position =
+        config.position_mode == PositionMode::Fixed && (config.pos_x != 0 || config.pos_y != 0);
+    let has_current_position = config.position_mode == PositionMode::Current;
+    DEV_LOGGER.log(
+        "WORKER",
+        &format!(
+            "position_mode={:?}, has_fixed_position={}, has_current_position={}, pos_x={}, pos_y={}",
+            config.position_mode, has_fixed_position, has_current_position, config.pos_x, config.pos_y
+        ),
+    );
     let use_smoothing = config.smoothing == 1 && cps < 50.0;
 
     let mut target_x = config.pos_x;
@@ -215,8 +272,19 @@ pub fn start_clicker(config: ClickerConfig, running: Arc<AtomicBool>) -> RunOutc
     let mut next_batch_time = Instant::now();
     let mut stop_reason = String::from("Stopped");
 
-    if has_position {
+    if has_fixed_position {
+        DEV_LOGGER.log(
+            "WORKER",
+            &format!("Moving mouse to ({}, {})", target_x, target_y),
+        );
         move_mouse(target_x, target_y);
+    } else if has_current_position {
+        DEV_LOGGER.log("WORKER", "Using current cursor position for clicking");
+    } else {
+        DEV_LOGGER.log(
+            "WORKER",
+            "No position set, will click at current cursor position",
+        );
     }
 
     while running.load(Ordering::SeqCst) {
@@ -245,7 +313,7 @@ pub fn start_clicker(config: ClickerConfig, running: Arc<AtomicBool>) -> RunOutc
 
         next_batch_time += Duration::from_secs_f64(batch_duration.max(0.001));
 
-        if has_position {
+        if has_fixed_position {
             if config.offset_chance <= 0.0 || rng.next_f64() * 100.0 <= config.offset_chance {
                 let angle = rng.next_f64() * 2.0 * PI;
                 let radius = rng.next_f64().sqrt() * config.offset;
@@ -289,6 +357,13 @@ pub fn start_clicker(config: ClickerConfig, running: Arc<AtomicBool>) -> RunOutc
             break;
         }
 
+        DEV_LOGGER.log(
+            "WORKER",
+            &format!(
+                "Sending {} clicks with button={}",
+                clicks_this_cycle, button
+            ),
+        );
         send_clicks(
             button,
             clicks_this_cycle,

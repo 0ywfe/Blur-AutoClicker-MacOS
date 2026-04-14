@@ -1,12 +1,19 @@
 use core_graphics::display::CGDisplay;
+use std::sync::OnceLock;
+
+/// Cached display height for coordinate conversion (must match mouse.rs)
+static DISPLAY_HEIGHT: OnceLock<i32> = OnceLock::new();
+
+fn get_display_height() -> i32 {
+    *DISPLAY_HEIGHT.get_or_init(|| CGDisplay::main().bounds().size.height as i32)
+}
 
 pub fn current_cursor_position() -> Option<(i32, i32)> {
-    let display = CGDisplay::main();
-    let height = display.bounds().size.height as i32;
+    let height = get_display_height();
 
     // Use CGEvent to get cursor position by creating a null event and reading its location
     use core_graphics::event_source::CGEventSource;
-    
+
     use core_graphics::event::CGEvent;
     use core_graphics::event_source::CGEventSourceStateID;
 
