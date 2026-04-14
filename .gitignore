@@ -9,4 +9,6 @@ target/
 .idea/
 *.orig
 *.rej
+src-tauri/target/
+src-tauri/Cargo.lock
 
