@@ -544,68 +544,87 @@ export default function AdvancedPanelLayout({
                       while enabled.
                     </p>
                   )}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
+                  {/* Position Mode Selector */}
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: 4 }}>
+                    <button
+                      className={settings.positionMode === "current" ? "adv-pick-btn active" : "adv-pick-btn"}
+                      onClick={() => update({ positionMode: "current" })}
+                      style={{ minWidth: "80px" }}
+                    >
+                      Current
+                    </button>
+                    <button
+                      className={settings.positionMode === "fixed" ? "adv-pick-btn active" : "adv-pick-btn"}
+                      onClick={() => update({ positionMode: "fixed" })}
+                      style={{ minWidth: "80px" }}
+                    >
+                      Fixed
+                    </button>
+                  </div>
+                  {settings.positionMode === "fixed" && (
                     <div
                       style={{
                         display: "flex",
-                        gap: "8px",
+                        flexDirection: "column",
                         alignItems: "center",
+                        gap: 4,
                       }}
                     >
                       <div
-                        className="adv-numbox-sm"
-                        style={{ minWidth: "70px", maxWidth: "70px" }}
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          alignItems: "center",
+                        }}
                       >
-                        <span
-                          className="adv-unit"
-                          style={{ marginLeft: 0, marginRight: 4 }}
+                        <div
+                          className="adv-numbox-sm"
+                          style={{ minWidth: "70px", maxWidth: "70px" }}
                         >
-                          X
-                        </span>
-                        <NumInput
-                          value={settings.positionX}
-                          onChange={(v) => update({ positionX: v })}
-                          min={0}
-                          style={{ width: "37px" }}
-                        />
+                          <span
+                            className="adv-unit"
+                            style={{ marginLeft: 0, marginRight: 4 }}
+                          >
+                            X
+                          </span>
+                          <NumInput
+                            value={settings.positionX}
+                            onChange={(v) => update({ positionX: v })}
+                            min={0}
+                            style={{ width: "37px" }}
+                          />
+                        </div>
+                        <div
+                          className="adv-numbox-sm"
+                          style={{ minWidth: "70px", maxWidth: "70px" }}
+                        >
+                          <span
+                            className="adv-unit"
+                            style={{ marginLeft: 0, marginRight: 4 }}
+                          >
+                            Y
+                          </span>
+                          <NumInput
+                            value={settings.positionY}
+                            onChange={(v) => update({ positionY: v })}
+                            min={0}
+                            style={{ width: "37px" }}
+                          />
+                        </div>
                       </div>
-                      <div
-                        className="adv-numbox-sm"
-                        style={{ minWidth: "70px", maxWidth: "70px" }}
+                      <button
+                        className="adv-pick-btn"
+                        onClick={handlePickPosition}
+                        disabled={pickingPosition}
                       >
-                        <span
-                          className="adv-unit"
-                          style={{ marginLeft: 0, marginRight: 4 }}
-                        >
-                          Y
-                        </span>
-                        <NumInput
-                          value={settings.positionY}
-                          onChange={(v) => update({ positionY: v })}
-                          min={0}
-                          style={{ width: "37px" }}
-                        />
-                      </div>
+                        {pickCountdown
+                          ? `Picking in ${pickCountdown}`
+                          : pickingPosition
+                            ? "Picking..."
+                            : "Pick"}
+                      </button>
                     </div>
-                    <button
-                      className="adv-pick-btn"
-                      onClick={handlePickPosition}
-                      disabled={pickingPosition}
-                    >
-                      {pickCountdown
-                        ? `Picking in ${pickCountdown}`
-                        : pickingPosition
-                          ? "Picking..."
-                          : "Pick"}
-                    </button>
-                  </div>
+                  )}
                 </div>
               </Disableable>
             </div>
