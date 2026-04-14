@@ -113,6 +113,9 @@ pub fn send_clicks(
             eprintln!("[MOUSE] Failed to create mouse DOWN event");
         }
 
+        // Let OS catch up (required on macOS per rusty-autoclicker)
+        std::thread::sleep(Duration::from_millis(10));
+
         if hold_ms > 0 {
             std::thread::sleep(Duration::from_millis(hold_ms as u64));
         }
@@ -124,6 +127,9 @@ pub fn send_clicks(
             DEV_LOGGER.log("MOUSE", "Failed to create mouse UP event");
             eprintln!("[MOUSE] Failed to create mouse UP event");
         }
+
+        // Let OS catch up after release too
+        std::thread::sleep(Duration::from_millis(10));
 
         if index + 1 < count && use_double_click_gap && double_click_delay_ms > 0 {
             std::thread::sleep(Duration::from_millis(double_click_delay_ms as u64));
