@@ -1,26 +1,16 @@
 use core_graphics::display::CGDisplay;
-use std::sync::OnceLock;
-
-/// Cached display height for coordinate conversion (must match mouse.rs)
-static DISPLAY_HEIGHT: OnceLock<i32> = OnceLock::new();
-
-fn get_display_height() -> i32 {
-    *DISPLAY_HEIGHT.get_or_init(|| CGDisplay::main().bounds().size.height as i32)
-}
+use core_graphics::event::CGEvent;
+use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 
 pub fn current_cursor_position() -> Option<(i32, i32)> {
-    let height = get_display_height();
-
-    // Use CGEvent to get cursor position by creating a null event and reading its location
-    use core_graphics::event_source::CGEventSource;
-
-    use core_graphics::event::CGEvent;
-    use core_graphics::event_source::CGEventSourceStateID;
-
+    // CGEvent.location() returns screen coordinates with origin at top-left,
+    // matching the failsafe screen-size axes. No Y-flip needed — flipping it
+    // here inverted the comparison and made top-edge stops fire near the bottom
+    // (and vice versa). See the matching fix in mouse.rs (commit 37377c0).
     let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState).ok()?;
     let event = CGEvent::new(source).ok()?;
     let loc = event.location();
-    Some((loc.x as i32, height - loc.y as i32))
+    Some((loc.x as i32, loc.y as i32))
 }
 
 pub fn current_screen_size() -> Option<(i32, i32)> {

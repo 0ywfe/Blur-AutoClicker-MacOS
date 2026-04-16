@@ -118,21 +118,16 @@ pub fn run() {
 }
 
 use core_graphics::display::CGDisplay;
+use core_graphics::event::CGEvent;
+use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 
 pub fn current_cursor_position() -> Option<(i32, i32)> {
-    let display = CGDisplay::main();
-    let height = display.bounds().size.height as i32;
-
-    // Use CGEvent to get cursor position by creating a null event and reading its location
-    use core_graphics::event_source::CGEventSource;
-
-    use core_graphics::event::CGEvent;
-    use core_graphics::event_source::CGEventSourceStateID;
-
+    // CGEvent.location() returns top-left-origin screen coordinates already;
+    // no Y-flip needed. See engine/mouse.rs commit 37377c0 and engine/failsafe.rs.
     let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState).ok()?;
     let event = CGEvent::new(source).ok()?;
     let loc = event.location();
-    Some((loc.x as i32, height - loc.y as i32))
+    Some((loc.x as i32, loc.y as i32))
 }
 
 pub fn current_screen_size() -> Option<(i32, i32)> {
