@@ -175,7 +175,20 @@ These features **inspired** improvements but were implemented differently:
 
 - **Operating System:** macOS 12.0 (Monterey) or later
 - **Architecture:** Apple Silicon (M1/M2/M3) or Intel
-- **Permissions:** Accessibility (for mouse control)
+- **Permissions:** Accessibility access required for mouse control
+
+### Enabling Accessibility Access
+
+This app requires **Accessibility access** to control the mouse and simulate clicks. Without it, the clicker will not function.
+
+**To grant Accessibility access:**
+1. Open **System Settings** → **Privacy & Security** → **Accessibility**
+2. Click the lock icon to make changes (enter your password if prompted)
+3. Click **+** and add `BlurAutoClicker` from Applications
+4. Ensure the toggle next to `BlurAutoClicker` is turned **ON**
+
+If the app doesn't appear in the list, browse to:
+`/Applications/BlurAutoClicker.app`
 
 ---
 
