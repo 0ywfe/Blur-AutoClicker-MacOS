@@ -64,10 +64,12 @@ impl DevLogger {
         }
     }
 
+    #[allow(dead_code)]
     pub fn log_value(&self, module: &str, key: &str, value: &str) {
         self.log(module, &format!("  {} = {:?}", key, value));
     }
 
+    #[allow(dead_code)]
     #[inline]
     pub fn log_enabled(&self) -> bool {
         cfg!(debug_assertions)

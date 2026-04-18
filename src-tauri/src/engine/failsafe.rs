@@ -1,26 +1,17 @@
 use core_graphics::display::CGDisplay;
-use std::sync::OnceLock;
+use core_graphics::event::CGEvent;
+use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 
-/// Cached display height for coordinate conversion (must match mouse.rs)
-static DISPLAY_HEIGHT: OnceLock<i32> = OnceLock::new();
+use super::ClickerConfig;
 
-fn get_display_height() -> i32 {
-    *DISPLAY_HEIGHT.get_or_init(|| CGDisplay::main().bounds().size.height as i32)
-}
-
+/// Get current cursor position in screen coordinates (top-left origin)
+/// Note: CGEvent.location() already returns screen coordinates, no flip needed
 pub fn current_cursor_position() -> Option<(i32, i32)> {
-    let height = get_display_height();
-
-    // Use CGEvent to get cursor position by creating a null event and reading its location
-    use core_graphics::event_source::CGEventSource;
-
-    use core_graphics::event::CGEvent;
-    use core_graphics::event_source::CGEventSourceStateID;
-
     let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState).ok()?;
     let event = CGEvent::new(source).ok()?;
     let loc = event.location();
-    Some((loc.x as i32, height - loc.y as i32))
+    // CGEvent returns screen coordinates directly (Y=0 at top-left)
+    Some((loc.x as i32, loc.y as i32))
 }
 
 pub fn current_screen_size() -> Option<(i32, i32)> {
@@ -28,8 +19,6 @@ pub fn current_screen_size() -> Option<(i32, i32)> {
     let bounds = display.bounds();
     Some((bounds.size.width as i32, bounds.size.height as i32))
 }
-
-use super::ClickerConfig;
 
 pub fn should_stop_for_failsafe(config: &ClickerConfig) -> Option<String> {
     let cursor = current_cursor_position()?;

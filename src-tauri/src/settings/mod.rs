@@ -1,7 +1,7 @@
 #[derive(Clone, serde::Deserialize, serde::Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ClickerSettings {
-    pub version: u32,
+    pub version: String,
     pub click_speed: f64,
     pub click_interval: String,
     pub mouse_button: String,
@@ -44,7 +44,7 @@ pub struct ClickerSettings {
 impl Default for ClickerSettings {
     fn default() -> Self {
         Self {
-            version: 3,
+            version: "3".to_string(),
             click_speed: 25.0,
             click_interval: "s".to_string(),
             mouse_button: "Left".to_string(),

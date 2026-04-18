@@ -1,8 +1,6 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
 
 const store = new LazyStore("settings.json");
-import { getVersion } from "@tauri-apps/api/app";
-const version = await getVersion();
 
 export type SavedPanel = "simple" | "advanced" | "macro";
 export type ExplanationMode = "off" | "text";
@@ -61,8 +59,10 @@ export interface AppInfo {
   screenshotProtectionSupported: boolean;
 }
 
+export const DEFAULT_SETTINGS_VERSION = "3.0.0";
+
 export const DEFAULT_SETTINGS: Settings = {
-  version: version,
+  version: DEFAULT_SETTINGS_VERSION,
   clickSpeed: 25,
   clickInterval: "s",
   mouseButton: "Left",
@@ -157,7 +157,7 @@ function sanitizeSettings(input?: Partial<Settings> | null): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...saved,
-    version: version,
+    version: DEFAULT_SETTINGS.version,
     clickSpeed: clampNumber(
       saved.clickSpeed,
       DEFAULT_SETTINGS.clickSpeed,
@@ -262,7 +262,7 @@ export async function hasTelemetryConsent(): Promise<boolean> {
   return consented === true;
 }
 
-export async function setTelemetryConsent(_accepted: boolean): Promise<void> {
-  await store.set("telemetry_consented", true);
+export async function setTelemetryConsent(accepted: boolean): Promise<void> {
+  await store.set("telemetry_consented", accepted);
   await store.save();
 }

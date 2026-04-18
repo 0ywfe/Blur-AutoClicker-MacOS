@@ -1,7 +1,9 @@
 # Blur Auto Clicker for macOS
 
-> **Original Project:** [Blur Auto Clicker](https://github.com/Blur009/Blur-AutoClicker) by Blur009 (Windows)  
+> **Original Project:** [Blur Auto Clicker v3.3.0](https://github.com/Blur009/Blur-AutoClicker) by Blur009 (Windows)  
 > **macOS Fork:** [joy-arz/Blur-AutoClicker-MacOS](https://github.com/joy-arz/Blur-AutoClicker-MacOS)
+
+**Current Version:** 3.2.0 (macOS fork) - Aligned with Windows v3.3.0 features
 
 <div align="center">
     <img src="https://github.com/joy-arz/Blur-AutoClicker-MacOS/blob/main/public/V3.0.0_UI.png" width="600"/>
@@ -64,8 +66,55 @@ These bugs were **discovered and fixed during this macOS port**:
 | Bug | Source | Fix |
 |-----|--------|-----|
 | **Position mode not working** | Original issue | Backend now properly handles `positionMode` setting |
-| **Coordinate Y-axis flip** | Original issue | Display height caching prevents CGEvent coordinate issues |
-| **Mouse events not posting** | Original issue | Added 10ms delays after down/up events |
+| **Coordinate Y-axis flip** | Original issue | CGEvent returns top-left origin coordinates directly |
+| **UI bug - Fixed button set to Current** | Session debugging | "Fixed" button now correctly calls `positionMode: "fixed"` |
+| **Mouse events not posting** | Original issue | CGEventFlags cleared, HID tap location, batched events |
+| **Synthetic event detection** | Cookie Clicker/web apps | Clear flags to reduce synthetic event detection |
+| **Variation std dev calculation** | Windows comparison | Fixed to `std_dev = interval * (variation / 100.0)` |
+| **Mouse button stuck at high CPS** | Issue #114 (Windows) | Ensure mouse-up events are posted on early exit |
+| **Tab change logic bug** | Code review | Fixed `lastPanel` tracking on tab switch |
+| **Redundant status polling** | Code review | Removed 200ms polling, now uses event-based updates |
+| **Version type mismatch** | Code review | Backend now uses string version consistently |
+| **Top-level await in store** | Code review | Replaced with lazy initialization with fallback |
+| **Rust telemetry on close** | Code review | Now uses actual settings from state, not defaults |
+
+### v3.3.0 Alignment (Windows → macOS)
+
+Changes from Windows v3.3.0 implemented in macOS fork:
+
+| Feature | Windows v3.3.0 | macOS Status |
+|---------|----------------|--------------|
+| **Batched mouse events** | `send_batch()` for high CPS | ✅ Implemented |
+| **Speed variation fix** | `std_dev = interval * (variation / 100.0)` | ✅ Implemented |
+| **Duty cycle in simple mode** | Randomization and Duty cycle in simple mode | ✅ Already present |
+| **UI icons instead of text** | Icons for top bar | Partial - uses existing UI |
+| **Scrollbar for settings** | Settings page scrollbar | ✅ Already present |
+
+### macOS-Specific Implementation Details
+
+#### CGEvent Tap Location
+- Uses `CGEventTapLocation::HID` for posting mouse events directly to HID system
+- Alternative `Session` tap location available but HID proved more reliable
+
+#### Event Flags
+- Events are created with `CGEventFlags::empty()` to clear synthetic flags
+- This helps events appear more like real hardware input
+
+#### Coordinate System
+- CGEvent returns screen coordinates with Y=0 at top-left (native macOS)
+- No Y-axis transformation needed for Core Graphics events
+
+#### Event Creation Flow
+```
+CGEventSource → CGEvent::new_mouse_event() → set_flags(empty) → post(HID)
+```
+
+#### Batch Event Optimization
+For high CPS (>50) with no hold time and no double-click gap, events are batched:
+```
+Create all events upfront → Post all to HID tap
+```
+This matches Windows `SendInput` behavior for better performance.
 
 ### Features from Other Projects (Inspiration Only)
 
@@ -187,20 +236,28 @@ src-tauri/src/
 ├── engine/
 │   ├── worker.rs      # Main click loop
 │   ├── mouse.rs       # Mouse event generation (CGEvent HID)
-│   ├── failsafe.rs    # Edge/corner detection
-│   ├── stats.rs       # Statistics tracking
-│   └── mod.rs         # ClickerConfig + PositionMode
+│   ├── failsafe.rs   # Edge/corner detection (top-left origin)
+│   ├── stats.rs      # Statistics tracking
+│   ├── rng.rs        # Fast random number generator
+│   └── mod.rs        # ClickerConfig + PositionMode
 ├── hotkeys.rs         # Global shortcut handling
 ├── ui_commands.rs     # Tauri IPC commands
 ├── settings/
 │   └── mod.rs         # ClickerSettings struct
+├── app_state.rs       # Runtime state management
 └── dev_logger.rs      # File-based debug logging
 
 src/
 ├── store.ts           # Frontend settings state
-├── App.tsx             # Main React component
-└── components/panels/ # UI panels (Simple, Advanced)
+├── App.tsx            # Main React component
+├── hotkeys.ts         # Keyboard utilities
+└── components/panels/ # UI panels (Simple, Advanced, Settings)
 ```
+
+### Debug Logging
+Logs are written to `~/Library/Application Support/BlurAutoClicker/logs/`
+- Filename format: `blur_autoclicker_{timestamp}.log`
+- Enable by building in debug mode or checking logs for issues
 
 ---
 
@@ -209,11 +266,15 @@ src/
 - [x] Position mode selection UI (Current/Fixed)
 - [x] OS catch-up delays for reliability
 - [x] File-based debug logging
+- [x] Proper CGEvent flag clearing for synthetic event handling
+- [x] Batched mouse event sending for high CPS
+- [x] Speed variation calculation aligned with Windows
 - [ ] Multi-monitor support
 - [ ] Human-like mode (smooth cursor movement)
 - [ ] Visual overlay for edge/corner zones
 - [ ] Profile system (save/load configurations)
 - [ ] Keyboard key pressing (like othyn's app)
+- [ ] CPU usage measurement (using mach_thread_time on macOS)
 
 ---
 

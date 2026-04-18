@@ -8,7 +8,6 @@ interface CumulativeStats {
   totalClicks: number;
   totalTimeSecs: number;
   totalSessions: number;
-  sessionsSent: number;
   avgCpu: number;
 }
 

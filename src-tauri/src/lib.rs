@@ -88,7 +88,7 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app_handle, event| {
+        .run(|app_handle, event| {
             if let tauri::RunEvent::WindowEvent {
                 event: tauri::WindowEvent::CloseRequested { .. },
                 label,
@@ -96,7 +96,8 @@ pub fn run() {
             } = &event
             {
                 if label == "main" {
-                    let settings = ClickerSettings::default();
+                    let state = app_handle.state::<ClickerState>();
+                    let settings = state.settings.lock().unwrap().clone();
                     if settings.telemetry_enabled {
                         let data = TelemetryData::from_settings(
                             &settings,
@@ -108,6 +109,7 @@ pub fn run() {
                             }
                         });
                     }
+                    state.running.store(false, std::sync::atomic::Ordering::SeqCst);
                     std::process::exit(0);
                 }
             }
@@ -117,25 +119,8 @@ pub fn run() {
         });
 }
 
-use core_graphics::display::CGDisplay;
-
-pub fn current_cursor_position() -> Option<(i32, i32)> {
-    let display = CGDisplay::main();
-    let height = display.bounds().size.height as i32;
-
-    // Use CGEvent to get cursor position by creating a null event and reading its location
-    use core_graphics::event_source::CGEventSource;
-
-    use core_graphics::event::CGEvent;
-    use core_graphics::event_source::CGEventSourceStateID;
-
-    let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState).ok()?;
-    let event = CGEvent::new(source).ok()?;
-    let loc = event.location();
-    Some((loc.x as i32, height - loc.y as i32))
-}
-
 pub fn current_screen_size() -> Option<(i32, i32)> {
+    use core_graphics::display::CGDisplay;
     let display = CGDisplay::main();
     let bounds = display.bounds();
     Some((bounds.size.width as i32, bounds.size.height as i32))

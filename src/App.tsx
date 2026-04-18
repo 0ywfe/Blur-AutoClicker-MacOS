@@ -43,10 +43,7 @@ const DEFAULT_APP_INFO: AppInfo = {
 
 async function syncSettingsToBackend(settings: Settings) {
   await invoke("update_settings", {
-    settings: {
-      ...settings,
-      version: 5,
-    },
+    settings,
   });
 }
 
@@ -204,20 +201,6 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!status.running) return;
-
-    const interval = window.setInterval(() => {
-      invoke<ClickerStatus>("get_status")
-        .then(setStatus)
-        .catch((err) => {
-          console.error("Failed to refresh status:", err);
-        });
-    }, 200);
-
-    return () => window.clearInterval(interval);
-  }, [status.running]);
-
   // -- Resize window for consent dialog --
   useEffect(() => {
     if (consentGiven !== false || !settingsLoaded) return;
@@ -273,13 +256,14 @@ export default function App() {
   }, []);
 
   const handleTabChange = (nextTab: Tab) => {
+    if (nextTab === "settings") {
+      setTab(nextTab);
+      return;
+    }
+
     setTab(nextTab);
 
-    if (nextTab === "settings") return;
-    if (settingsRef.current.lastPanel === nextTab) return;
-
-    persistSettings({
-      ...settingsRef.current,
+    updateSettings({
       lastPanel: nextTab,
     });
   };

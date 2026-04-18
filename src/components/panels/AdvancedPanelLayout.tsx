@@ -187,7 +187,6 @@ export default function AdvancedPanelLayout({
     }
   }, [settings.clickSpeed, settings.clickInterval]);
 
-
   const showDesc = (text: string) =>
     showExplanations ? <p className="adv-desc">{text}</p> : null;
 
@@ -545,18 +544,31 @@ export default function AdvancedPanelLayout({
                     </p>
                   )}
                   {/* Position Mode Selector */}
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: 4 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      marginBottom: 4,
+                    }}
+                  >
                     <button
-                      className={settings.positionMode === "current" ? "adv-pick-btn active" : "adv-pick-btn"}
+                      className={
+                        settings.positionMode === "current"
+                          ? "adv-pick-btn active"
+                          : "adv-pick-btn"
+                      }
                       onClick={() => update({ positionMode: "current" })}
-                      
                     >
                       Current
                     </button>
                     <button
-                      className={settings.positionMode === "fixed" ? "adv-pick-btn active" : "adv-pick-btn"}
-                      onClick={() => update({ positionMode: "current" })}
-                      
+                      className={
+                        settings.positionMode === "fixed"
+                          ? "adv-pick-btn active"
+                          : "adv-pick-btn"
+                      }
+                      onClick={() => update({ positionMode: "fixed" })}
                     >
                       Fixed
                     </button>
