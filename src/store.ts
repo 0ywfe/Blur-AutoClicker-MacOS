@@ -1,4 +1,5 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { invoke } from "@tauri-apps/api/core";
 
 const store = new LazyStore("settings.json");
 
@@ -265,4 +266,32 @@ export async function hasTelemetryConsent(): Promise<boolean> {
 export async function setTelemetryConsent(accepted: boolean): Promise<void> {
   await store.set("telemetry_consented", accepted);
   await store.save();
+}
+
+export async function checkAccessibilityPermission(): Promise<boolean> {
+  try {
+    return await invoke<boolean>("check_accessibility_permission");
+  } catch {
+    return false;
+  }
+}
+
+export async function requestAccessibilityPermission(): Promise<void> {
+  try {
+    await invoke("request_accessibility_permission");
+  } catch (err) {
+    console.error("Failed to request accessibility permission:", err);
+  }
+}
+
+export async function openAccessibilitySettings(): Promise<void> {
+  try {
+    await invoke("open_accessibility_settings");
+  } catch (err) {
+    console.error("Failed to open accessibility settings:", err);
+  }
+}
+
+export async function openAccessibilityPermission(): Promise<void> {
+  await openAccessibilitySettings();
 }

@@ -11,4 +11,5 @@ target/
 *.rej
 src-tauri/target/
 src-tauri/Cargo.lock
+Improvement.MD
 

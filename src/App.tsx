@@ -14,12 +14,18 @@ const AdvancedPanelCompact = lazy(
 const TelemetryConsent = lazy(() => import("./components/TelemetryConsent"));
 
 import { canonicalizeHotkeyForBackend } from "./hotkeys";
-import { hasTelemetryConsent, setTelemetryConsent } from "./store";
+import {
+  hasTelemetryConsent,
+  setTelemetryConsent,
+  openAccessibilityPermission,
+} from "./store";
+import AccessibilityWarning from "./components/AccessibilityWarning";
 import {
   DEFAULT_SETTINGS,
   type AppInfo,
   type ClickerStatus,
   type Settings,
+  checkAccessibilityPermission,
   clearSavedSettings,
   loadSettings,
   saveSettings,
@@ -61,6 +67,7 @@ export default function App() {
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
   const launchWindowPlacementDone = useRef(false);
   const [consentGiven, setConsentGiven] = useState<boolean | null>(null);
+  const [hasAccessibility, setHasAccessibility] = useState(false);
 
   const [updateInfo, setUpdateInfo] = useState<{
     currentVersion: string;
@@ -126,6 +133,12 @@ export default function App() {
         setAppInfo(loadedAppInfo);
         setStatus(loadedStatus);
         setSettingsLoaded(true);
+
+        const accessibilityGranted = await checkAccessibilityPermission();
+        setHasAccessibility(accessibilityGranted);
+        if (!accessibilityGranted) {
+          console.warn("Accessibility permission not granted - clicker will not work");
+        }
 
         await syncSettingsToBackend(hydratedSettings);
         await invoke("register_hotkey", { hotkey: hydratedSettings.hotkey });
@@ -315,6 +328,15 @@ export default function App() {
         onAccept={handleConsentAccept}
         onDecline={handleConsentDecline}
       />
+    );
+  }
+
+  // -- Accessibility warning --
+  if (!hasAccessibility) {
+    return (
+      <div className="app-root">
+        <AccessibilityWarning onOpenSettings={openAccessibilityPermission} />
+      </div>
     );
   }
 

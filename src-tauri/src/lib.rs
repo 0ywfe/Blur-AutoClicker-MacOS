@@ -8,6 +8,7 @@ mod hotkeys;
 mod telemetry;
 mod ui_commands;
 mod updates;
+mod accessibility;
 use crate::engine::worker::emit_status;
 
 use crate::hotkeys::register_hotkey_inner;
@@ -55,6 +56,10 @@ pub fn run() {
 
             migrate_old_config();
 
+            if !accessibility::check_accessibility() {
+                log::warn!("[BlurAutoClicker] Accessibility permission not granted!");
+            }
+
             let initial_hotkey = {
                 let state = app.state::<ClickerState>();
                 let hotkey = state.settings.lock().unwrap().hotkey.clone();
@@ -85,6 +90,9 @@ pub fn run() {
             ui_commands::get_stats,
             ui_commands::reset_stats,
             updates::update_checker::check_for_updates,
+            accessibility::check_accessibility_permission,
+            accessibility::request_accessibility_permission,
+            accessibility::open_accessibility_settings,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
